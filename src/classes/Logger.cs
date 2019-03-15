@@ -48,13 +48,14 @@ namespace PriceGrabber
     public async void Log(LotItem item)
       {
         // Remove $ and , before saving
-        int index = item.Bid.IndexOf('$');
-        string bid = "";
+        string bid = item.Bid;
+        int index = bid.IndexOf('$');
+
         if(index >= 0)
-          bid = item.Bid.Remove(0, 1);
-        index = item.Bid.IndexOf(',');
+          bid = bid.Remove(0, 1);
+        index = bid.IndexOf(',');
         if(index >= 0)
-          bid = item.Bid.Remove(index, 1);
+          bid = bid.Remove(index, 1);
         
         string logItem = $"{item.LotNumber}, {item.Year}, {item.MakeModel}, {bid}";
         writer.WriteLineAsync(logItem);

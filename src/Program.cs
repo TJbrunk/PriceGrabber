@@ -62,7 +62,7 @@ namespace PriceGrabber
                     {
                         logger.Log(item);
                         newLot = true;
-                        Console.WriteLine($"Lot {item.LotNumber} high bid: {item.Bid} \n");
+                        Console.WriteLine($"High bid: {item.Bid} \n");
                     }
                     
                 } while (true);
