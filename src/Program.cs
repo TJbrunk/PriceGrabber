@@ -83,10 +83,10 @@ namespace PriceGrabber
                 string lotDescription = driver.FindElement(By.ClassName("lotdesc")).Text;
                 string[] details = lotDescription.Split("\n");
                 
-                string lot = details[1].Split(" ", 2)[1];
+                string lot = details[1].Split(" ", 2)[1].Trim();
                 string[] ymm = details[0].Split(" ", 2);
-                string year = ymm[0];
-                string makeModel = ymm[1];
+                string year = ymm[0].Trim();
+                string makeModel = ymm[1].Trim();
 
                 return(year, makeModel, lot);
             }
@@ -114,7 +114,7 @@ namespace PriceGrabber
                 //*[@id="gridsterComp"]/gridster-item/widget/div/div[1]/div/div/div/div[3]/section/section/bidding-previous-bids
                 string x = previousBids.Text;
                 
-                IWebElement bids = previousBids.FindElements(By.ClassName("prevBidStateName"));
+                var bids = previousBids.FindElements(By.ClassName("prevBidStateName"));
                 if(bids.Count == 4)
                 {
                     bid = bids[3].Text;
@@ -145,7 +145,6 @@ namespace PriceGrabber
             }
             catch(NoSuchElementException)
             {
-                throw;
                 // Might not be any previous bids yet if its a new lot
                 return "???";
             }
