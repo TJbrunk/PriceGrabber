@@ -55,5 +55,10 @@ namespace PriceGrabber
       {
         return $"{this.Year} - {MakeModel} (Lot: {LotNumber})";
       }
+      
+      public override bool Equals(object obj)
+      {
+        return this.LotNumber == ((LotItem)obj).LotNumber;
+      }
     }
   }
