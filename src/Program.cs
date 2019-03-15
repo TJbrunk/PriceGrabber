@@ -16,6 +16,7 @@ namespace PriceGrabber
         {
             string auction = args[0];
             IWebDriver driver = null;
+            Logger logger = null;
             try {
                 // GetTodaysAuctions();
 
@@ -38,32 +39,30 @@ namespace PriceGrabber
                 Thread.Sleep(5000);
 
                 bool newLot = true;
-                string lotNumber = "";
-                string year = "";
-                string makeModel = "";
-                string bid = "";
+                LotItem item = new LotItem();
+                logger = new Logger(auction);
                 do
                 {
                     if(newLot)
                     {
                         // Get the current lot number
-                        (year, makeModel, lotNumber) = GetLotDetails(driver);
+                        item = GetLotDetails(driver);
                         // Get the starting bid
-                        bid = GetStartingBid(driver);
+                        item.Bid = GetStartingBid(driver);
                         newLot = false;
                     }
                     
                     // Watch the Previous Bids window
                     string newBid = GetPreviousBid(driver);
-                    bid = string.IsNullOrEmpty(newBid) ? bid : newBid;
+                    item.Bid = string.IsNullOrEmpty(newBid) ? item.Bid : newBid;
                     Thread.Sleep(200);
                     
                     // Check if a new lot has started
-                    if(GetLotNumber(driver) != lotNumber)
+                    if(GetLotNumber(driver) != item.LotNumber)
                     {
+                        logger.Log(item);
                         newLot = true;
-                        Console.WriteLine($"Lot {lotNumber} high bid: {bid} \n");
-                        bid = "??";
+                        Console.WriteLine($"Lot {item.LotNumber} high bid: {item.Bid} \n");
                     }
                     
                 } while (true);
@@ -74,31 +73,27 @@ namespace PriceGrabber
             }
             finally{
                 driver?.Dispose();
+                logger?.Dispose();
             }
         }
         
         
         // Returns Year, Make & Model, LotNumber
-        private static (string, string, string) GetLotDetails(IWebDriver driver)
+        private static LotItem GetLotDetails(IWebDriver driver)
         {
             try
             {
                 //*[@id="lotDesc-COPART078A"]
-                string lotDescription = driver.FindElement(By.ClassName("lotdesc")).Text;
-                string[] details = lotDescription.Split("\n");
-                
-                string lot = details[1].Split(" ", 2)[1].Trim();
-                string[] ymm = details[0].Split(" ", 2);
-                string year = ymm[0].Trim();
-                string makeModel = ymm[1].Trim();
-                Console.Write($"{year} - {makeModel}\t");
-                return(year, makeModel, lot);
+                IWebElement lotDescription = driver.FindElement(By.ClassName("lotdesc"));
+                LotItem i = new LotItem(lotDescription);
+                Console.Write(i);
+                return i;
             }
             // IFrame might update while looking up the lot number
             catch (StaleElementReferenceException)
             {
                 // Return an empty string, and that will trigger a new 
-                return ("?", "?", "?");
+                return new LotItem();
             }
         }
         
