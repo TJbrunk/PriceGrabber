@@ -91,7 +91,7 @@ namespace PriceGrabber
                 string[] ymm = details[0].Split(" ", 2);
                 string year = ymm[0].Trim();
                 string makeModel = ymm[1].Trim();
-
+                Console.Write($"{year} - {makeModel}\t");
                 return(year, makeModel, lot);
             }
             // IFrame might update while looking up the lot number
@@ -142,10 +142,14 @@ namespace PriceGrabber
             try 
             {
                 //*[@id="gridsterComp"]/gridster-item/widget/div/div/div/div/div/div[3]/section/section/bidding-area/bidding-dialer-area/div[2]/div/div/div[1]
-                var bidder = driver.FindElement(By.ClassName("auctionrunningdiv-MACRO"));
+                IWebElement bidder = driver.FindElement(By.ClassName("auctionrunningdiv-MACRO"));
                 //*[@id="gridsterComp"]/gridster-item/widget/div/div/div/div/div/div[3]/section/section/bidding-area/bidding-dialer-area/div[2]/div/div/div[1]/bidding-dialer-refactor/svg/text[1]
-                var x = bidder.FindElement(By.XPath("./*")).Text;
-                return x.Split("\n", StringSplitOptions.RemoveEmptyEntries)[0];
+                string x = bidder.FindElement(By.XPath("./*")).Text;
+                if(x.Contains("Get"))
+                {
+                    return "??";
+                }
+                return x.Split("\n", StringSplitOptions.RemoveEmptyEntries)[0].Trim();
             }
             catch(NoSuchElementException)
             {
