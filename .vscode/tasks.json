@@ -5,6 +5,10 @@
             "label": "build",
             "command": "dotnet",
             "type": "process",
+            "group": {
+                "isDefault": true,
+                "kind": "build"
+            },
             "args": [
                 "build",
                 "${workspaceFolder}/src/PriceGrabber.csproj"
