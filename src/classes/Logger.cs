@@ -13,26 +13,24 @@ namespace PriceGrabber
     
     public Logger(string auction)
     {
+      // Set the logging directory to the execution folder/logs
       string dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-      
       dir = Path.Combine(dir, "logs");
       
+      // Create the directory if it doesn't exist
+      Directory.CreateDirectory(dir);
+      
+      // Check the auction name for bad characters
       Path.GetInvalidFileNameChars()
         .ToList()
         .ForEach(c => auction = auction.Replace(c, '_'));
       
+      // Check for duplicate file anems
       fileName = Path.Combine(dir, $"{auction}.csv");
-      int v = 1;
-      do
-      {
-        fileName = Path.Combine(dir, $"{auction}_{v}.csv");
-        v++;
-      } while (File.Exists(fileName));
-      
-      File.Create(fileName);
       
       Console.WriteLine($"Creating log file {fileName} ");
-      writer = new StreamWriter(fileName);
+      writer = new StreamWriter(fileName, true);
+      writer.AutoFlush = true;
     }
     
     ~Logger()
@@ -49,7 +47,16 @@ namespace PriceGrabber
     #pragma warning disable 4014, 1998
     public async void Log(LotItem item)
       {
-        string logItem = $"{item.LotNumber}, {item.Year}, {item.MakeModel}, {item.Bid}";
+        // Remove $ and , before saving
+        int index = item.Bid.IndexOf('$');
+        string bid = "";
+        if(index >= 0)
+          bid = item.Bid.Remove(0, 1);
+        index = item.Bid.IndexOf(',');
+        if(index >= 0)
+          bid = item.Bid.Remove(index, 1);
+        
+        string logItem = $"{item.LotNumber}, {item.Year}, {item.MakeModel}, {bid}";
         writer.WriteLineAsync(logItem);
       }
     #pragma warning restore 4014, 1998
