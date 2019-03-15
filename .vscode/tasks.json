@@ -10,6 +10,25 @@
                 "${workspaceFolder}/src/PriceGrabber.csproj"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "options": {
+                "cwd": "${workspaceFolder}/src"
+            },
+            "args": [
+                "publish",
+                "${workspaceFolder}/src/PriceGrabber.csproj",
+                "--configuration",
+                "Release",
+                "--runtime",
+                "win10-x64",
+                "--verbosity",
+                "normal"
+            ],
+            "problemMatcher": "$msCompile"
         }
     ]
 }
