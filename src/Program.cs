@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenQA.Selenium;
@@ -15,12 +16,14 @@ namespace PriceGrabber
         {
             IWebDriver driver = null;
             try {
+                GetTodaysAuctions();
+
                 // Create a webdriver
                 ChromeOptions options = new ChromeOptions();
                 options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240");
                 driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
                 // end
-                
+
                 // Go to the auction page
                 driver.Navigate().GoToUrl("https://www.copart.com/auctionDashboard?auctionDetails=180-A-56028598");
                 
@@ -148,6 +151,41 @@ namespace PriceGrabber
                 // Might not be any previous bids yet if its a new lot
                 return "???";
             }
+        }
+    
+        private static void GetTodaysAuctions()
+        {
+             // Create a webdriver
+            ChromeOptions options = new ChromeOptions();
+            options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240");
+            IWebDriver driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
+            driver.Navigate().GoToUrl("https://www.copart.com/salesListResult/");
+
+            // Wait until the page loads
+            IWait<IWebDriver> wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(30.00));
+            wait.Until(driver1 => ((IJavaScriptExecutor)driver).ExecuteScript("return document.readyState").Equals("complete"));
+
+            var rows = driver.FindElements(By.XPath("//*[@id='clientSideDataTable']/tbody/tr"));
+
+            Regex reg = new Regex(@"\b\d{2}\/\d{2}\/\d{4}\b");
+            foreach (IWebElement r in rows)
+            {
+                // Example rowText:
+                //"08:00 AM MDT GA - Atlanta East SOUTH EAST 03/14/2019 03/18/2019 Future"
+                Match m = reg.Match(r.Text);
+                if(m.Success)
+                {
+                    string date = m.Value;
+                    string time = r.Text.Substring(0, 8);
+                    DateTime dt = DateTime.ParseExact($"{date} {time}", "MM/dd/yyyy hh:mm tt", null);
+                    if(dt > DateTime.Now)
+                    {
+                        Console.WriteLine($"Next Auction: {dt}.");
+                    }
+                }
+            }
+
+            driver.Dispose();
         }
     }
 }
