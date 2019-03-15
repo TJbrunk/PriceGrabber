@@ -14,9 +14,10 @@ namespace PriceGrabber
     {
         static void Main(string[] args)
         {
+            string auction = args[0];
             IWebDriver driver = null;
             try {
-                GetTodaysAuctions();
+                // GetTodaysAuctions();
 
                 // Create a webdriver
                 ChromeOptions options = new ChromeOptions();
@@ -25,7 +26,7 @@ namespace PriceGrabber
                 // end
 
                 // Go to the auction page
-                driver.Navigate().GoToUrl("https://www.copart.com/auctionDashboard?auctionDetails=180-A-56028598");
+                driver.Navigate().GoToUrl($"https://www.copart.com/auctionDashboard?auctionDetails={auction}");
                 
                 // Wait until the page loads
                 IWait<IWebDriver> wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(30.00));
