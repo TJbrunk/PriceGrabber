@@ -16,28 +16,28 @@ namespace PriceGrabber
     {
         static void Main(string[] args)
         {
-            List<Auction> auctions;
+            List<PriceScraper> scrapers;
             if(args.Count() > 0)
             {
-                auctions = CreateAuctionScrapers(args.ToList());
+                scrapers = CreatePriceScrapers(args.ToList());
             }
             else
             {
                 List<string> ids = GetTodaysAuctions();
-                auctions = CreateAuctionScrapers(ids);
+                scrapers = CreatePriceScrapers(ids);
             }
             
             // Start each auction scraper
-            auctions.ForEach(a => a.Start());
+            scrapers.ForEach(a => a.Start());
         }
         
-        private static List<Auction> CreateAuctionScrapers(List<string> auctionIds)
+        private static List<PriceScraper> CreatePriceScrapers(List<string> auctionIds)
         {
-            // Create all the auction price grabbers
-            List<Auction> auctions = new List<Auction>();
+            // Create all the auction price scapers
+            List<PriceScraper> auctions = new List<PriceScraper>();
             
             auctionIds.ForEach(a => {
-                Auction auction = new Auction(a);
+                PriceScraper auction = new PriceScraper(a);
                 auctions.Add(auction);
             });
             

@@ -11,7 +11,7 @@ using OpenQA.Selenium.Support.UI;
 
 namespace PriceGrabber
 {
-    public class Auction
+    public class PriceScraper
     {
       
         IWebDriver webDriver;
@@ -27,14 +27,14 @@ namespace PriceGrabber
             Interval = 200
         };
         
-        public Auction(string id)
+        public PriceScraper(string auctionId)
         {
-            this.auctionId = id;
-            this.logger = new Logger(id);
+            this.auctionId = auctionId;
+            this.logger = new Logger(auctionId);
             this.updateTimer.Elapsed += UpdateTimer_Elapsed;
         }
 
-        ~Auction()
+        ~PriceScraper()
         {
             this.updateTimer.Dispose();
             this.webDriver.Dispose();
