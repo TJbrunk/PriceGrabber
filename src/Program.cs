@@ -20,15 +20,18 @@ namespace PriceGrabber
             if(args.Count() > 0)
             {
                 scrapers = CreatePriceScrapers(args.ToList());
+                // Start each auction scraper
+                scrapers.ForEach(a => a.Start());
             }
             else
             {
-                List<string> ids = GetTodaysAuctions();
-                scrapers = CreatePriceScrapers(ids);
+                List<Auction> auctions = GetTodaysAuctions();
+                // TODO:
+                // Need to start timers to wait until the auction starts
+                // and then create the scraper
+                // scrapers = CreatePriceScrapers(ids);
             }
             
-            // Start each auction scraper
-            scrapers.ForEach(a => a.Start());
         }
         
         private static List<PriceScraper> CreatePriceScrapers(List<string> auctionIds)
@@ -44,7 +47,7 @@ namespace PriceGrabber
             return auctions;
         }
         
-        private static List<string> GetTodaysAuctions()
+        private static List<Auction> GetTodaysAuctions()
         {
              // Create a webdriver
             ChromeOptions options = new ChromeOptions();
@@ -58,13 +61,15 @@ namespace PriceGrabber
 
             // Get all the rows that define todays auctions
             var auctions = driver.FindElements(By.XPath("//*[@id='auctionLiveNow-datatable']/tbody/tr"));
-            auctions.ToList().ForEach(auction => {
-                
+
+            List<Auction> todaysAuctions = new List<Auction>();
+            auctions.ToList().ForEach(a => {
+                todaysAuctions.Add(new Auction(a.Text));
             });
 
             driver.Dispose();
 
-            return new List<string>();
+            return todaysAuctions;;
         }
     }
 }
