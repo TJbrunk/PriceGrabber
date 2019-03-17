@@ -75,7 +75,7 @@ namespace PriceGrabber
         private void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             try
-            {    
+            {
 
                 // Check if a new lot has started
                 LotItem newLot = this.GetLotDetails();

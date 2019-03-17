@@ -14,9 +14,9 @@ namespace PriceGrabber
 {
     class Program
     {
+        static List<PriceScraper> scrapers;
         static void Main(string[] args)
         {
-            List<PriceScraper> scrapers;
             if(args.Count() > 0)
             {
                 scrapers = CreatePriceScrapers(args.ToList());
@@ -26,14 +26,21 @@ namespace PriceGrabber
             else
             {
                 List<Auction> auctions = GetTodaysAuctions();
-                // TODO:
-                // Need to start timers to wait until the auction starts
-                // and then create the scraper
+                // Subscribe to the Auction starting event
+                auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
                 // scrapers = CreatePriceScrapers(ids);
             }
-            
         }
-        
+
+        private static void StartPriceGrabber(object sender, EventArgs e)
+        {
+            Auction auction = sender as Auction;
+            PriceScraper s = new PriceScraper(auction.Id);
+            scrapers.Add(s);
+            s.Start();
+            Console.WriteLine($"New auction started. {auction.Name} {auction.Id} {auction.StartTime}");
+        }
+
         private static List<PriceScraper> CreatePriceScrapers(List<string> auctionIds)
         {
             // Create all the auction price scapers
@@ -60,16 +67,17 @@ namespace PriceGrabber
             wait.Until(d => ((IJavaScriptExecutor)driver).ExecuteScript("return document.readyState").Equals("complete"));
 
             // Get all the rows that define todays auctions
-            var auctions = driver.FindElements(By.XPath("//*[@id='auctionLiveNow-datatable']/tbody/tr"));
+            var auctions = driver.FindElements(By.XPath("//*[@id='auctionLaterToday-datatable']/tbody/tr"));
 
             List<Auction> todaysAuctions = new List<Auction>();
             auctions.ToList().ForEach(a => {
                 todaysAuctions.Add(new Auction(a.Text));
+                Console.WriteLine(a.Text);
             });
 
             driver.Dispose();
 
-            return todaysAuctions;;
+            return todaysAuctions;
         }
     }
 }
