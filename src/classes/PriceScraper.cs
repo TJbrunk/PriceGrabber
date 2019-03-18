@@ -57,6 +57,10 @@ namespace PriceGrabber
             this.updateTimer.Enabled = true;
             return new Task(() => {
                 while(Running);
+                
+                this.updateTimer.Dispose();
+                this.webDriver.Dispose();
+                this.logger.Dispose();
             });
         }
 

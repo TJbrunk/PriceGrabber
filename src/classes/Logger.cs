@@ -52,15 +52,20 @@ namespace PriceGrabber
     #pragma warning disable 4014, 1998
     public async void Log(LotItem item)
       {
+        int index = -1;
+        string bid = "??";
         // Remove $ and , before saving
-        string bid = item.Bid;
-        int index = bid.IndexOf('$');
+        if(item.Bid != null)
+        {
+          bid = item.Bid;
+          index = bid.IndexOf('$');
+          if(index >= 0)
+            bid = bid.Remove(0, 1);
 
-        if(index >= 0)
-          bid = bid.Remove(0, 1);
-        index = bid.IndexOf(',');
-        if(index >= 0)
-          bid = bid.Remove(index, 1);
+          index = bid.IndexOf(',');
+          if(index >= 0)
+            bid = bid.Remove(index, 1);
+        }
         
         string logItem = $"{item.LotNumber}, {item.Year}, {item.MakeModel}, {bid}";
         writer.WriteLineAsync(logItem);
