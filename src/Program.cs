@@ -22,20 +22,23 @@ namespace PriceGrabber
         static void Main(string[] args)
         {
             
-            Logger.ConvertCsvToDynamo(@"P:\Personal Projects\CopartPriceGrabber\Logs\43-B.csv");
-            // if(args.Count() > 0)
-            // {
-            //     scrapers = CreatePriceScrapers(args.ToList());
-            //     // Start each auction scraper
-            //     scrapers.ForEach(a => a.Start());
-            // }
-            // else
-            // {
-            //     List<Auction> auctions = GetTodaysAuctions();
-            //     // Subscribe to the Auction starting event
-            //     auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
-            //     // scrapers = CreatePriceScrapers(ids);
-            // }
+            // Logger.ConvertCsvToDynamo(@"P:\Personal Projects\CopartPriceGrabber\Logs\43-B.csv");
+            List<Task> tasks = new List<Task>();
+            if(args.Count() > 0)
+            {
+                scrapers = CreatePriceScrapers(args.ToList());
+                // Start each auction scraper
+                scrapers.ForEach(a => tasks.Add(a.Start()));
+            }
+            else
+            {
+                List<Auction> auctions = GetTodaysAuctions();
+                // Subscribe to the Auction starting event
+                auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
+                // scrapers = CreatePriceScrapers(ids);
+            }
+            
+            Task.WaitAll(tasks.ToArray());
         }
 
         private static void StartPriceGrabber(object sender, EventArgs e)

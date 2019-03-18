@@ -67,5 +67,10 @@ namespace PriceGrabber
       {
         return this.LotNumber == ((LotItem)obj).LotNumber;
       }
+      
+      public override int GetHashCode()
+      {
+        return int.Parse(this.LotNumber);
+      }
     }
   }

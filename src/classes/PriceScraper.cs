@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -20,6 +21,8 @@ namespace PriceGrabber
         
         LotItem currentLot;
         Regex priceRegex = new Regex(@"\$(?<bid>[0-9]{0,3},*[0-9]{1,3})");
+        
+        bool Running;
         
         System.Timers.Timer updateTimer = new System.Timers.Timer {
             AutoReset = true,
@@ -41,34 +44,49 @@ namespace PriceGrabber
             this.logger.Dispose();
         }
 
-        public void Start()
+        public Task Start()
         {
+            Running = true;
             this.webDriver = this.CreateWebDriver();
+            this.PrepareWebDriver();
             // Get all the info about the current lot
             this.currentLot = this.GetLotDetails();
             this.currentLot.Bid = this.GetBid();
             Console.Write($"First lot: {this.currentLot}");
             // Start the update timer to periodically check for new bids and new lots
             this.updateTimer.Enabled = true;
+            return new Task(() => {
+                while(Running);
+            });
         }
 
         // Try's to find the LotDescription on the current page.
+        // Will stop Scaper task if 'sale-end' element is found
         // Returns NULL if details aren't found
         private LotItem GetLotDetails()
         {
+            LotItem i;
             try
             {
                 //*[@id="lotDesc-COPART078A"]
                 IWebElement lotDescription = webDriver.FindElement(By.ClassName("lotdesc"));
-                LotItem i = new LotItem(lotDescription);
-                return i;
+                i = new LotItem(lotDescription);
             }
-            // IFrame might update while looking up the lot number
+            // IFrame might update while looking up the lot number. Continue
             catch (StaleElementReferenceException)
             {
-                // Return an empty string, and that will trigger a new 
-                return null;
+                i = null;
             }
+            catch (NoSuchElementException)
+            {
+                // Couldn't find the lot description.
+                // Check if the sale is over
+                IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
+                i = null;
+                if(ended != null)
+                    this.Running = false;
+            }
+            return i;
         }
 
         
@@ -79,7 +97,7 @@ namespace PriceGrabber
 
                 // Check if a new lot has started
                 LotItem newLot = this.GetLotDetails();
-                if(newLot != null && this.currentLot != newLot)
+                if(newLot != null && this.currentLot.LotNumber != newLot.LotNumber)
                 {
                     // New lot, save the last lot details
                     this.logger.Log(this.currentLot);
@@ -102,6 +120,7 @@ namespace PriceGrabber
             catch (System.Exception ex)
             {
                 Console.WriteLine($"ERROR: {ex}");
+                this.Running = false;
             }
         }
 
@@ -118,9 +137,9 @@ namespace PriceGrabber
                     previousBids.FindElements(By.ClassName("prevBidStateName"));
                 
                 // If there are previous bids, get the most recent else return a '?'
-                return bids != null ? 
+                return (bids != null && bids.Count > 0) ? 
                     bids[bids.Count - 1].Text.Trim() :
-                    "?";
+                    null;
             }
             catch(NoSuchElementException)
             {
