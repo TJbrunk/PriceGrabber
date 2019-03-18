@@ -34,5 +34,21 @@
             ],
             "problemMatcher": "$msCompile"
         }
+        ,
+        {
+            "label": "Zip",
+            "command": "zip",
+            "type": "process",
+            "dependsOn": "publish",
+            "options": {
+                "cwd": "${workspaceFolder}/src/bin/Release/netcoreapp2.2/win10-x64/publish"
+            },
+            "args": [
+                "-r",
+                "../Vx.x.x.zip",
+                "*"
+            ],
+            "problemMatcher": "$msCompile"
+        }
     ]
 }
