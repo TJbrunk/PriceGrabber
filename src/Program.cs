@@ -6,6 +6,10 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.Runtime;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -17,19 +21,21 @@ namespace PriceGrabber
         static List<PriceScraper> scrapers;
         static void Main(string[] args)
         {
-            if(args.Count() > 0)
-            {
-                scrapers = CreatePriceScrapers(args.ToList());
-                // Start each auction scraper
-                scrapers.ForEach(a => a.Start());
-            }
-            else
-            {
-                List<Auction> auctions = GetTodaysAuctions();
-                // Subscribe to the Auction starting event
-                auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
-                // scrapers = CreatePriceScrapers(ids);
-            }
+            
+            Logger.ConvertCsvToDynamo(@"P:\Personal Projects\CopartPriceGrabber\Logs\43-B.csv");
+            // if(args.Count() > 0)
+            // {
+            //     scrapers = CreatePriceScrapers(args.ToList());
+            //     // Start each auction scraper
+            //     scrapers.ForEach(a => a.Start());
+            // }
+            // else
+            // {
+            //     List<Auction> auctions = GetTodaysAuctions();
+            //     // Subscribe to the Auction starting event
+            //     auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
+            //     // scrapers = CreatePriceScrapers(ids);
+            // }
         }
 
         private static void StartPriceGrabber(object sender, EventArgs e)

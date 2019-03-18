@@ -11,7 +11,14 @@ namespace PriceGrabber
       public string LotNumber { get; private set; } = "?";
       
       public string Bid { get; set; } = "??";
-      public LotItem(){ }
+      public LotItem(string csv)
+      {
+        var details = csv.Split(',');
+        LotNumber = details[0];
+        Year = details[1];
+        MakeModel = details[2];  
+        Bid = details[3];
+      }
       
       public LotItem(IWebElement lotdesc)
       {
