@@ -68,7 +68,7 @@ namespace PriceGrabber
         }
         
         string logItem = $"{item.LotNumber}, {item.Year}, {item.MakeModel}, {bid}";
-        writer.WriteLineAsync(logItem);
+        await writer.WriteLineAsync(logItem);
       }
     #pragma warning restore 4014, 1998
     

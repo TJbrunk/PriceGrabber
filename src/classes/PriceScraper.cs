@@ -22,46 +22,39 @@ namespace PriceGrabber
         LotItem currentLot;
         Regex priceRegex = new Regex(@"\$(?<bid>[0-9]{0,3},*[0-9]{1,3})");
         
-        bool Running;
-        
-        System.Timers.Timer updateTimer = new System.Timers.Timer {
-            AutoReset = true,
-            Enabled = false,
-            Interval = 200
-        };
+        bool auctionRunning = true;
         
         public PriceScraper(string auctionId)
         {
             this.auctionId = auctionId;
             this.logger = new Logger(auctionId);
-            this.updateTimer.Elapsed += UpdateTimer_Elapsed;
         }
 
         ~PriceScraper()
         {
-            this.updateTimer.Dispose();
             this.webDriver.Dispose();
             this.logger.Dispose();
         }
 
         public Task Start()
         {
-            Running = true;
             this.webDriver = this.CreateWebDriver();
             this.PrepareWebDriver();
             // Get all the info about the current lot
             this.currentLot = this.GetLotDetails();
             this.currentLot.Bid = this.GetBid();
             Console.Write($"First lot: {this.currentLot}");
-            // Start the update timer to periodically check for new bids and new lots
-            this.updateTimer.Enabled = true;
-            return new Task(() => {
-                while(Running);
-                
-                this.updateTimer.Dispose();
+            
+            return Task.Run(() => {
+                while(this.auctionRunning)
+                {
+                    Scrape();
+                    Thread.Sleep(300);
+                }
                 this.webDriver.Dispose();
                 this.logger.Dispose();
             });
+                        
         }
 
         // Try's to find the LotDescription on the current page.
@@ -88,17 +81,17 @@ namespace PriceGrabber
                 IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
                 i = null;
                 if(ended != null)
-                    this.Running = false;
+                    Console.WriteLine($"Auction {this.auctionId} Ended");
+                    this.auctionRunning = false;
             }
             return i;
         }
 
         
-        private void UpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void Scrape()
         {
             try
             {
-
                 // Check if a new lot has started
                 LotItem newLot = this.GetLotDetails();
                 if(newLot != null && this.currentLot.LotNumber != newLot.LotNumber)
@@ -124,7 +117,7 @@ namespace PriceGrabber
             catch (System.Exception ex)
             {
                 Console.WriteLine($"ERROR: {ex}");
-                this.Running = false;
+                this.auctionRunning = false;
             }
         }
 
