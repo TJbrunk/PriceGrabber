@@ -15,7 +15,7 @@ namespace PriceGrabber
     public class PriceScraper
     {
       
-        IWebDriver webDriver;
+        readonly IWebDriver webDriver;
         string auctionId;
         Logger logger;
         
@@ -24,8 +24,9 @@ namespace PriceGrabber
         
         bool auctionRunning = true;
         
-        public PriceScraper(string auctionId)
+        public PriceScraper(IWebDriver driver, string auctionId)
         {
+            this.webDriver = driver;
             this.auctionId = auctionId;
             this.logger = new Logger(auctionId);
         }
@@ -38,7 +39,6 @@ namespace PriceGrabber
 
         public Task Start()
         {
-            this.webDriver = this.CreateWebDriver();
             this.PrepareWebDriver();
             // Get all the info about the current lot
             this.currentLot = this.GetLotDetails();
@@ -164,18 +164,16 @@ namespace PriceGrabber
             }
         }
         
-        // Creates a new Chrome desktop web driver
-        private IWebDriver CreateWebDriver()
-        {
-            // Create a webdriver
-            ChromeOptions options = new ChromeOptions();
-            options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240");
-            return new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
-        }
-        
         // Goes to the Auction URL and waits for the page to be ready
         private void PrepareWebDriver()
         {
+            // create a new tab for this auction
+            webDriver.FindElement(By.CssSelector("body")).SendKeys(Keys.Control +"t");
+            
+            // Switch to the new tab
+            var tabs = webDriver.WindowHandles;
+            webDriver.SwitchTo().Window(tabs[tabs.Count - 1]);
+            
             // Go to the auction page
             webDriver.Navigate()
                 .GoToUrl($"https://www.copart.com/auctionDashboard?auctionDetails={auctionId}");
