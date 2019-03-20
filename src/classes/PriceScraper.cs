@@ -14,8 +14,8 @@ namespace PriceGrabber
 {
     public class PriceScraper
     {
-      
-        IWebDriver webDriver;
+        string tab;
+        readonly IWebDriver webDriver;
         string auctionId;
         Logger logger;
         
@@ -23,38 +23,60 @@ namespace PriceGrabber
         Regex priceRegex = new Regex(@"\$(?<bid>[0-9]{0,3},*[0-9]{1,3})");
         
         bool auctionRunning = true;
-        
-        public PriceScraper(string auctionId)
+        private Task task;
+        public PriceScraper(IWebDriver driver, string auctionId)
         {
+            this.webDriver = driver;
             this.auctionId = auctionId;
             this.logger = new Logger(auctionId);
+            this.task = new Task(() => ScraperAsync());
         }
 
         ~PriceScraper()
         {
-            this.webDriver.Dispose();
             this.logger.Dispose();
         }
 
         public Task Start()
         {
-            this.webDriver = this.CreateWebDriver();
-            this.PrepareWebDriver();
-            // Get all the info about the current lot
-            this.currentLot = this.GetLotDetails();
-            this.currentLot.Bid = this.GetBid();
-            Console.Write($"First lot: {this.currentLot}");
-            
-            return Task.Run(() => {
-                while(this.auctionRunning)
+            try
+            {
+                this.PrepareWebDriver();
+                // Get all the info about the current lot
+                this.currentLot = this.GetLotDetails();
+                if(currentLot != null)
                 {
-                    Scrape();
-                    Thread.Sleep(300);
+                    this.currentLot.Bid = this.GetBid();
+                    Console.Write($"First lot: {this.currentLot}");
+                    this.task.Start();
+                    return this.task;
                 }
-                this.webDriver.Dispose();
-                this.logger.Dispose();
-            });
-                        
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine($"Error in price scrapper. {ex}");
+            }
+            finally
+            {
+                lock (this.webDriver)
+                {
+                    this.SetWebDriverFocus();
+                    this.webDriver.Close();
+                    this.webDriver.SwitchTo().Window(this.webDriver.WindowHandles[0]);
+                }
+            }
+            // return a completed task immediatly
+            return Task.Run(() => {});
+        }
+
+        private void ScraperAsync()
+        {
+            while(this.auctionRunning)
+            {
+                Scrape();
+                Thread.Sleep(500);
+            }
+            this.logger.Dispose();
         }
 
         // Try's to find the LotDescription on the current page.
@@ -76,48 +98,59 @@ namespace PriceGrabber
             }
             catch (NoSuchElementException)
             {
-                // Couldn't find the lot description.
-                // Check if the sale is over
-                IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
-                i = null;
-                if(ended != null)
-                    Console.WriteLine($"Auction {this.auctionId} Ended");
+                try
+                {
+                    // Couldn't find the lot description.
+                    // Check if the sale is over
+                    IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
+                    i = null;
+                    if(ended != null)
+                        Console.WriteLine($"Auction {this.auctionId} Ended");
+                        this.auctionRunning = false;
+                }
+                catch (System.Exception)
+                {
+                    i = null;
                     this.auctionRunning = false;
+                }
             }
             return i;
         }
 
-        
         private void Scrape()
         {
-            try
+            lock (this.webDriver)
             {
-                // Check if a new lot has started
-                LotItem newLot = this.GetLotDetails();
-                if(newLot != null && this.currentLot.LotNumber != newLot.LotNumber)
+                try
                 {
-                    // New lot, save the last lot details
-                    this.logger.Log(this.currentLot);
-                    
-                    Console.WriteLine($"High bid: {currentLot.Bid}");
-                    
-                    newLot.Bid = GetBid();
-                    
-                    Console.Write($"New Lot: {newLot}");
-                    // Update the current lot to the new lot
-                    this.currentLot = newLot;
+                    this.SetWebDriverFocus();
+                    // Check if a new lot has started
+                    LotItem newLot = this.GetLotDetails();
+                    if(newLot != null && this.currentLot.LotNumber != newLot.LotNumber)
+                    {
+                        // New lot, save the last lot details
+                        this.logger.Log(this.currentLot);
+                        
+                        Console.WriteLine($"High bid: {currentLot.Bid}");
+                        
+                        newLot.Bid = GetBid();
+                        
+                        Console.Write($"New Lot: {newLot}");
+                        // Update the current lot to the new lot
+                        this.currentLot = newLot;
+                    }
+                    else
+                    {
+                        // Same lot as last call, Check for a new bid
+                        string newBid = this.GetBid();
+                        currentLot.Bid = string.IsNullOrEmpty(newBid) ? currentLot.Bid : newBid;
+                    }
                 }
-                else
+                catch (System.Exception ex)
                 {
-                    // Same lot as last call, Check for a new bid
-                    string newBid = this.GetBid();
-                    currentLot.Bid = string.IsNullOrEmpty(newBid) ? currentLot.Bid : newBid;
+                    Console.WriteLine($"ERROR: {ex}");
+                    this.auctionRunning = false;
                 }
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine($"ERROR: {ex}");
-                this.auctionRunning = false;
             }
         }
 
@@ -164,21 +197,20 @@ namespace PriceGrabber
             }
         }
         
-        // Creates a new Chrome desktop web driver
-        private IWebDriver CreateWebDriver()
-        {
-            // Create a webdriver
-            ChromeOptions options = new ChromeOptions();
-            options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240");
-            return new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
-        }
-        
         // Goes to the Auction URL and waits for the page to be ready
         private void PrepareWebDriver()
         {
+            this.webDriver.SwitchTo().Window(this.webDriver.WindowHandles[0]);
+            // create a new tab for this auction
+            ((IJavaScriptExecutor) this.webDriver).ExecuteScript($"window.open('https://www.copart.com/auctionDashboard?auctionDetails={auctionId}','_blank');");
+            
+            // Switch to the new tab
+            this.tab = webDriver.WindowHandles[webDriver.WindowHandles.Count - 1];
+            webDriver.SwitchTo().Window(this.tab);
+            
             // Go to the auction page
-            webDriver.Navigate()
-                .GoToUrl($"https://www.copart.com/auctionDashboard?auctionDetails={auctionId}");
+            // webDriver.Navigate()
+            //     .GoToUrl($"https://www.copart.com/auctionDashboard?auctionDetails={auctionId}");
             
             // Wait until the page loads
             IWait<IWebDriver> wait = new OpenQA.Selenium.Support.UI.WebDriverWait(webDriver, TimeSpan.FromSeconds(30.00));
@@ -186,11 +218,16 @@ namespace PriceGrabber
                                 .ExecuteScript("return document.readyState")
                                 .Equals("complete")
                         );
-            
-            // Set focus to the IFrame element on the page
-            webDriver.SwitchTo().Frame(0);
             // Wait for the IFrame to load
             Thread.Sleep(5000);
+        }
+
+        private void SetWebDriverFocus()
+        {
+            // Switch to the current this auction tab
+            webDriver.SwitchTo().Window(this.tab);
+            // Set focus to the IFrame element on the page
+            webDriver.SwitchTo().Frame(0);
         }
     }
 }
