@@ -176,6 +176,7 @@ namespace PriceGrabber
                 // Might not be any previous bids yet if its a new lot
                 try 
                 {
+                    //*[@id="gridsterComp"]/gridster-item/widget/div/div/div/div/div/div[3]/section/section/bidding-area/bidding-dialer-area/div[2]/div/div/div[1]/bidding-dialer-refactor/svg/text[1]
                     IWebElement start = 
                     webDriver.FindElement(By.ClassName("auctionrunningdiv-MACRO"));
                     string bid = start.FindElement(By.XPath("./*")).Text;
