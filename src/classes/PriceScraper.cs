@@ -14,20 +14,19 @@ namespace PriceGrabber
 {
     public class PriceScraper
     {
-      
         IWebDriver webDriver;
         string auctionId;
         Logger logger;
-        
         LotItem currentLot;
         Regex priceRegex = new Regex(@"\$(?<bid>[0-9]{0,3},*[0-9]{1,3})");
-        
         bool auctionRunning = true;
+        private Task task;
         
         public PriceScraper(string auctionId)
         {
             this.auctionId = auctionId;
             this.logger = new Logger(auctionId);
+            this.task = new Task(() => ScraperAsync());            
         }
 
         ~PriceScraper()
@@ -36,24 +35,39 @@ namespace PriceGrabber
             this.logger.Dispose();
         }
 
+        private void ScraperAsync()
+        {
+            while(this.auctionRunning)
+            {
+                Scrape();
+                Thread.Sleep(500);
+            }
+            this.logger.Dispose();
+            this.webDriver.Dispose();
+        }
+        
         public Task Start()
         {
-            this.webDriver = this.CreateWebDriver();
-            this.PrepareWebDriver();
-            // Get all the info about the current lot
-            this.currentLot = this.GetLotDetails();
-            this.currentLot.Bid = this.GetBid();
-            Console.Write($"First lot: {this.currentLot}");
-            
-            return Task.Run(() => {
-                while(this.auctionRunning)
+            try
+            {
+                this.webDriver = this.CreateWebDriver();
+                this.PrepareWebDriver();
+                // Get all the info about the current lot
+                this.currentLot = this.GetLotDetails();
+                if(currentLot != null)
                 {
-                    Scrape();
-                    Thread.Sleep(300);
+                    this.currentLot.Bid = this.GetBid();
+                    Console.Write($"First lot: {this.currentLot}");
+                    this.task.Start();
+                    return this.task;
                 }
-                this.webDriver.Dispose();
-                this.logger.Dispose();
-            });
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine($"Error in price scrapper. {ex}");
+            }
+            // return a completed task immediatly
+            return Task.Run(() => {});
                         
         }
 
@@ -76,13 +90,21 @@ namespace PriceGrabber
             }
             catch (NoSuchElementException)
             {
-                // Couldn't find the lot description.
-                // Check if the sale is over
-                IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
-                i = null;
-                if(ended != null)
-                    Console.WriteLine($"Auction {this.auctionId} Ended");
+                try
+                {
+                    // Couldn't find the lot description.
+                    // Check if the sale is over
+                    IWebElement ended = webDriver.FindElement(By.ClassName("sale-end"));
+                    i = null;
+                    if(ended != null)
+                        Console.WriteLine($"Auction {this.auctionId} Ended");
+                        this.auctionRunning = false;
+                }
+                catch (System.Exception)
+                {
+                    i = null;
                     this.auctionRunning = false;
+                }
             }
             return i;
         }
@@ -143,8 +165,9 @@ namespace PriceGrabber
                 // Might not be any previous bids yet if its a new lot
                 try 
                 {
+                    //*[@id="gridsterComp"]/gridster-item/widget/div/div/div/div/div/div[3]/section/section/bidding-area/bidding-dialer-area/div[2]/div/div/div[1]/bidding-dialer-refactor/svg/text[1]
                     IWebElement start = 
-                    webDriver.FindElement(By.ClassName("auctionrunningdiv-MACRO"));
+                        webDriver.FindElement(By.ClassName("auctionrunningdiv-MACRO"));
                     string bid = start.FindElement(By.XPath("./*")).Text;
                     
                     Match m = priceRegex.Match(bid);
