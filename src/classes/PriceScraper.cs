@@ -42,6 +42,7 @@ namespace PriceGrabber
             try
             {
                 this.PrepareWebDriver();
+                this.SetWebDriverFocus();
                 // Get all the info about the current lot
                 this.currentLot = this.GetLotDetails();
                 if(currentLot != null)
@@ -225,10 +226,17 @@ namespace PriceGrabber
 
         private void SetWebDriverFocus()
         {
-            // Switch to the current this auction tab
-            webDriver.SwitchTo().Window(this.tab);
-            // Set focus to the IFrame element on the page
-            webDriver.SwitchTo().Frame(0);
+            try
+            {
+                // Switch to the current this auction tab
+                webDriver.SwitchTo().Window(this.tab);
+                // Set focus to the IFrame element on the page
+                webDriver.SwitchTo().Frame(0);
+            }
+            catch(Exception ex)
+            {
+                ;
+            }
         }
     }
 }

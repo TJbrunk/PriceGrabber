@@ -29,7 +29,7 @@ namespace PriceGrabber
                 List<Task> tasks = new List<Task>();
                 if(args.Count() > 0)
                 {
-                    scrapers = CreatePriceScrapers(args.ToList());
+                    scrapers = CreatePriceScrapers(Program.driver, args.ToList());
                     // Start each auction scraper
                     scrapers.ForEach(a => tasks.Add(a.Start()));
                 }
