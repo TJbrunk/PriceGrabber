@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Timers;
 using OpenQA.Selenium;
 
@@ -7,13 +8,10 @@ namespace PriceGrabber
 {
     public class Auction
     {
-        public event EventHandler AuctionIsStartingEvent;
         public string YardNum { get; private set; }
         public DateTime StartTime { get; private set; }
         // Lane is based on Vehicle type and state 
         public string Lane { get; private set; }// A, B, C etc
-        private Timer auctionStartTimer;
-        
         
         public Auction(IWebElement a, DateTime yardStartTime)
         {
@@ -44,24 +42,6 @@ namespace PriceGrabber
             
             // If a start time isn't avaible for this table row, use the provided start time
             this.StartTime = string.IsNullOrEmpty(startTime) ? yardStartTime : DateTime.Parse(startTime);
-            TimeSpan diff = StartTime - DateTime.Now;
-            double delay = diff.TotalMilliseconds;
-
-            if(delay <=0)
-            {
-                // if the auction already started, set a fixed delay
-                // for the event handlers to get setup
-                delay = 10000;
-            }
-
-            // Create timer to go off when the auction starts
-            auctionStartTimer = new Timer {
-                AutoReset = false,
-                Enabled = true,
-                Interval = delay
-            };
-
-            auctionStartTimer.Elapsed += (object o, ElapsedEventArgs e) => this.AuctionIsStartingEvent?.Invoke(this, null);
         }
-  }
+    }
 }

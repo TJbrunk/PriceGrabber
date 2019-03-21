@@ -19,6 +19,7 @@ namespace PriceGrabber
     class Program
     {
         static List<PriceScraper> scrapers;
+        static System.Timers.Timer auctionStartTimer;
         static void Main(string[] args)
         {
             try
@@ -34,9 +35,25 @@ namespace PriceGrabber
                 else
                 {
                     List<Auction> auctions = GetTodaysAuctions();
-                    // Subscribe to the Auction starting event
-                    auctions.ForEach(a => a.AuctionIsStartingEvent += StartPriceGrabber);
-                    // scrapers = CreatePriceScrapers(ids);
+                    List<Auction> uniqueStartTimes = 
+                        auctions.GroupBy(a => a.StartTime)
+                                .Select(b => b.First())
+                                .OrderBy(c => c.StartTime)
+                                .ToList();
+                                
+                    
+                    uniqueStartTimes.ForEach((u) => {
+                        CreateAsyncWaitTask(u);
+                        while(auctionStartTimer.Enabled == true)
+                        {
+                            Task.Delay(5000);
+                        }
+                        
+                        auctions.FindAll(a => a.StartTime == u.StartTime)
+                                .ForEach(a => tasks.Add(StartPriceGrabber(a)));
+                    });
+                    
+                    Console.WriteLine("\n");
                 }
                 
                 Task.WaitAll(tasks.ToArray());
@@ -47,17 +64,28 @@ namespace PriceGrabber
             }
         }
 
-        private static void StartPriceGrabber(object sender, EventArgs e)
+        private static void CreateAsyncWaitTask(Auction a)
+        {
+            TimeSpan diff = a.StartTime - DateTime.Now;
+            double delay = diff.TotalMilliseconds;
+            // Create timer to go off when the auction starts
+            auctionStartTimer = new System.Timers.Timer {
+                AutoReset = false,
+                Enabled = true,
+                Interval = delay
+            };
+        }
+        
+        private static Task StartPriceGrabber(Auction auction)
         {
             // Going to have several auctions starting at the top of the hour.
             // Lock down the startup process to avoid conflicts
             lock (scrapers)
             {
-                Auction auction = sender as Auction;
                 PriceScraper s = new PriceScraper($"{auction.YardNum}-{auction.Lane}");
                 scrapers.Add(s);
-                s.Start();
                 Console.WriteLine($"New auction started. {auction.YardNum} {auction.Lane} {auction.StartTime}");
+                return s.Start();
             }
         }
 
