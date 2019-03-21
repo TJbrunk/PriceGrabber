@@ -49,11 +49,16 @@ namespace PriceGrabber
 
         private static void StartPriceGrabber(object sender, EventArgs e)
         {
-            Auction auction = sender as Auction;
-            PriceScraper s = new PriceScraper(auction.Id);
-            scrapers.Add(s);
-            s.Start();
-            Console.WriteLine($"New auction started. {auction.Name} {auction.Id} {auction.StartTime}");
+            // Going to have several auctions starting at the top of the hour.
+            // Lock down the startup process to avoid conflicts
+            lock (scrapers)
+            {
+                Auction auction = sender as Auction;
+                PriceScraper s = new PriceScraper($"{auction.YardNum}-{auction.Lane}");
+                scrapers.Add(s);
+                s.Start();
+                Console.WriteLine($"New auction started. {auction.YardNum} {auction.Lane} {auction.StartTime}");
+            }
         }
 
         private static List<PriceScraper> CreatePriceScrapers(List<string> auctionIds)
@@ -74,20 +79,47 @@ namespace PriceGrabber
              // Create a webdriver
             ChromeOptions options = new ChromeOptions();
             options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240");
+            options.AddArgument("--allow-file-access-from-files");
+            options.AddArgument("--disable-javascript");
             IWebDriver driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
-            driver.Navigate().GoToUrl("https://www.copart.com/todaysAuction/");
 
+            driver.Navigate().GoToUrl("https://www.copart.com/todaysAuction/");
             // Wait until the page loads
             IWait<IWebDriver> wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30.00));
             wait.Until(d => ((IJavaScriptExecutor)driver).ExecuteScript("return document.readyState").Equals("complete"));
+
+            // driver.Navigate().GoToUrl("file:///P:/Personal%20Projects/CopartPriceGrabber/private/TodaysAuctions/Salvage%20Cars%20and%20Insurance%20Auction%20Cars%20-%20Today's%20Copart%20Auctions.html");
 
             // Get all the rows that define todays auctions
             var auctions = driver.FindElements(By.XPath("//*[@id='auctionLaterToday-datatable']/tbody/tr"));
 
             List<Auction> todaysAuctions = new List<Auction>();
+            DateTime start = new DateTime();
+            
+            // Loop over each row in the auctionLaterToday table:
             auctions.ToList().ForEach(a => {
-                todaysAuctions.Add(new Auction(a.Text));
-                Console.WriteLine(a.Text);
+                try
+                {
+                    // Only the first lot in the yard displays a start time.
+                    // Pass this time into following constructors so it can use this time if not available
+                    Auction auction = new Auction(a, start);
+                    
+                    // Handle the ignored Salvage lots
+                    if(!string.IsNullOrEmpty(auction.YardNum))
+                    {
+                        start = auction.StartTime;
+                        todaysAuctions.Add(auction);
+                        Console.WriteLine($"{auction.YardNum}-{auction.Lane} will start at {auction.StartTime}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Skipping salvage lot");
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Error configuring auction. {ex}");
+                }
             });
 
             driver.Dispose();
